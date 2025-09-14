@@ -1,5 +1,6 @@
 <?php
 if (!defined('ABSPATH')) exit;
+require_once CHS_PLUGIN_DIR . 'inc/services/class-chs-file-detector.php';
 
 function chs_admin_dashboard() {
     echo '<div class="wrap"><h1>Centris Houzez Sync</h1>';
@@ -10,52 +11,87 @@ function chs_admin_dashboard() {
         echo '<div class="updated notice"><p><strong>Sync started. Check logs for details.</strong></p></div>';
     }
 
-    // Handle Clear Logs trigger
-    if (isset($_POST['chs_clear_log']) && check_admin_referer('chs_clear_log_action', 'chs_clear_log_nonce')) {
-        $upload_dir = wp_upload_dir();
-        $log_file = $upload_dir['basedir'] . '/centris-sync/logs/log-' . date('Y-m-d') . '.txt';
-        if (file_exists($log_file)) {
-            unlink($log_file);
-            echo '<div class="updated notice"><p><strong>Today\'s log cleared successfully.</strong></p></div>';
+    // Handle Clear Logs
+    if (isset($_POST['chs_clear_logs']) && check_admin_referer('chs_clear_logs_action', 'chs_clear_logs_nonce')) {
+        $logFile = CHS_LOG_FILE;
+        if (file_exists($logFile)) {
+            file_put_contents($logFile, '');
         }
+        echo '<div class="updated notice"><p><strong>Logs cleared.</strong></p></div>';
     }
 
-    // Run Sync Now Button
-    echo '<form method="post" style="margin-bottom:20px;">';
+    // Settings: source path & filename pattern
+    $sourcePath   = get_option('chs_source_path', '/home/vitev704/centris');
+    $filePattern  = get_option('chs_file_pattern', 'PIVOTELECOM*.TXT;PIVOTELECOM*.ZIP');
+    $cronMorning  = get_option('chs_cron_morning', '06:45');
+    $cronEvening  = get_option('chs_cron_evening', '18:45');
+
+    echo '<h2>Settings</h2>';
+    echo '<form method="post" action="options.php">';
+    settings_fields('chs_settings_group');
+    do_settings_sections('chs_settings_group');
+    echo '<table class="form-table">';
+    echo '<tr><th>Source Path</th><td><input type="text" name="chs_source_path" value="' . esc_attr($sourcePath) . '" size="60" /></td></tr>';
+    echo '<tr><th>Filename Pattern</th><td><input type="text" name="chs_file_pattern" value="' . esc_attr($filePattern) . '" size="60" /></td></tr>';
+    echo '<tr><th>Cron Morning</th><td><input type="time" name="chs_cron_morning" value="' . esc_attr($cronMorning) . '" /></td></tr>';
+    echo '<tr><th>Cron Evening</th><td><input type="time" name="chs_cron_evening" value="' . esc_attr($cronEvening) . '" /></td></tr>';
+    echo '</table>';
+    submit_button('Save Settings');
+    echo '</form>';
+
+    // Action buttons
+    echo '<form method="post" style="margin-top:20px;">';
     wp_nonce_field('chs_manual_sync_action', 'chs_manual_sync_nonce');
-    submit_button('Run Sync Now', 'primary', 'chs_manual_sync');
+    submit_button('Run Sync Now', 'primary', 'chs_manual_sync', false);
+
+    wp_nonce_field('chs_scan_now_action', 'chs_scan_now_nonce');
+    submit_button('Scan Now', 'secondary', 'chs_scan_now', false);
+
+    wp_nonce_field('chs_clear_logs_action', 'chs_clear_logs_nonce');
+    submit_button('Clear Logs', 'delete', 'chs_clear_logs', false);
     echo '</form>';
 
-    // Clear Log Button
-    echo '<form method="post" style="margin-bottom:20px;">';
-    wp_nonce_field('chs_clear_log_action', 'chs_clear_log_nonce');
-    submit_button('Clear Today\'s Log', 'secondary', 'chs_clear_log');
-    echo '</form>';
+        // Handle "Scan Now"
+    if (isset($_POST['chs_scan_now']) && check_admin_referer('chs_scan_now_action', 'chs_scan_now_nonce')) {
+        update_option('chs_last_scan', time()); // just to trigger refresh
+        echo '<div class="updated notice"><p><strong>Scan executed. Table refreshed.</strong></p></div>';
+    
+    // Detected source files
+    echo '<h2>Detected source files (last 5)</h2>';
+    echo '<p><em>Timezone: America/Toronto</em></p>';
+    // $files = chs_detect_source_files($sourcePath, $filePattern, 5);/
+    $files = CHS_FileDetector::detect($sourcePath, $filePattern, 5);
 
-    // Display Log
-    $upload_dir = wp_upload_dir();
-$log_dir = $upload_dir['basedir'] . '/centris-sync/logs/';
-$log_file = $log_dir . 'log-' . date('Y-m-d') . '.txt';
-
-
-
-$upload_dir = wp_upload_dir();
-$log_dir = $upload_dir['basedir'] . '/centris-sync/logs/';
-$log_file = $log_dir . 'log-' . date('Y-m-d') . '.txt';
-
-$upload_dir = wp_upload_dir();
-$log_dir    = $upload_dir['basedir'] . '/centris-sync/logs/';
-$log_file   = $log_dir . 'log-' . date('Y-m-d') . '.txt';
-
-echo '<h2>Log Preview</h2>';
-
-if (file_exists($log_file) && is_readable($log_file)) {
-    echo '<pre style="white-space:pre-wrap; word-wrap:break-word;">';
-    echo file_get_contents($log_file); // Display raw content as-is
-    echo '</pre>';
-} else {
-    echo '<em>No log file found or not readable.</em>';
+    if (!empty($files)) {
+        echo '<table class="widefat"><thead><tr><th>Path</th><th>Size</th><th>MTime</th></tr></thead><tbody>';
+        foreach ($files as $f) {
+            echo '<tr>';
+            echo '<td>' . esc_html($f['path']) . '</td>';
+            echo '<td>' . esc_html($f['size_mb']) . '</td>';
+            echo '<td>' . esc_html($f['mtime']) . '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+    } else {
+        echo '<p><em>No files detected.</em></p>';
+    }
 }
 
-echo '</div>';
+    // Logs viewer
+echo '<h2>Logs</h2>';
+
+$todayLog  = CHS_LOG_FILE; //$logDir . 'log-' . date('Y-m-d') . '.txt';
+
+if (file_exists($todayLog)) {
+    $logs = file($todayLog, FILE_IGNORE_NEW_LINES);
+    $lastLogs = array_slice($logs, -50); // last 50 lines
+    $output = implode("\n", $lastLogs);  // convert array → string
+
+    echo '<pre style="background:#f9f9f9; padding:10px; max-height:400px; overflow:auto;">'
+        . $output
+ . '</pre>';
+} else {
+    echo '<p><em>No log file found for today.</em></p>';
+}
+    echo '</div>';
 }

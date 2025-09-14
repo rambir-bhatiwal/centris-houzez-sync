@@ -10,21 +10,21 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Define plugin constants
-define( 'CHS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'CHS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define('CHS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
-// ✅ Toggle this ON (true) for testing, OFF (false) for production
-define( 'CHS_DEV_MODE', true );
-// define( 'CHS_DEV_MODE', false );  // move ZIPs to archived/ (production)
-
-// Include core files
+// Include core files/
+require_once CHS_PLUGIN_DIR . 'inc/constants.php';
 require_once CHS_PLUGIN_DIR . 'inc/sync.php';
 require_once CHS_PLUGIN_DIR . 'inc/photos.php';
 require_once CHS_PLUGIN_DIR . 'inc/mapping.php';
 require_once CHS_PLUGIN_DIR . 'inc/admin.php';
 require_once CHS_PLUGIN_DIR . 'inc/logger.php';
 require_once CHS_PLUGIN_DIR . 'inc/zip-parser.php';
+require_once CHS_PLUGIN_DIR . 'inc/cron/class-chs-cron.php';
 
+// Load services
+require_once CHS_PLUGIN_DIR . 'inc/services/class-chs-file-detector.php';
+new CHS_Cron();
 
 // Activation hook
 function chs_activate() {
@@ -38,6 +38,13 @@ function chs_activate() {
 register_activation_hook( __FILE__, 'chs_activate' );
 
 
+function chs_register_settings() {
+    register_setting('chs_settings_group', 'chs_source_path');
+    register_setting('chs_settings_group', 'chs_file_pattern');
+    register_setting('chs_settings_group', 'chs_cron_morning');
+    register_setting('chs_settings_group', 'chs_cron_evening');
+}
+add_action('admin_init', 'chs_register_settings');
 
 // Check Houzez theme is active (optional guard).
 

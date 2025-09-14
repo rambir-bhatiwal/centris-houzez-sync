@@ -1,5 +1,6 @@
 <?php
 if (! defined( 'ABSPATH' )) exit;
+require_once CHS_PLUGIN_DIR . 'inc/constants.php';
 
 class CHS_ZipReader {
 
@@ -15,10 +16,11 @@ class CHS_ZipReader {
     public function __construct() {
         $upload_dir = wp_upload_dir();
         $this->base_dir    = rtrim( $upload_dir['basedir'], '/\\' ) . '/centris-sync/';
-        $this->zip_dir     = $this->base_dir . 'zips/';
-        $this->extract_dir = $this->base_dir . 'extracted/';
-        $this->archive_dir = $this->base_dir . 'archived/';
-        $this->failed_dir  = $this->base_dir . 'failed/';
+        // $this->zip_dir     = $this->base_dir . 'zips/';
+        $this->zip_dir     = CHS_SOURCE_PATH . '/';  // use source path directly
+        $this->extract_dir = CHS_BASE_DIR . 'extracted/';
+        $this->archive_dir = CHS_BASE_DIR . 'archived/';
+        $this->failed_dir  = CHS_BASE_DIR . 'failed/';
 
         foreach ( [ $this->zip_dir, $this->extract_dir, $this->archive_dir, $this->failed_dir ] as $d ) {
             if ( ! file_exists( $d ) ) {

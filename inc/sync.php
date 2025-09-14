@@ -18,11 +18,10 @@ if (!defined('ABSPATH')) exit;
  * @return array
  */
 
- function chs_sync_properties() {
+ function chs_sync_properties(): void {
     try {
             $reader = new CHS_ZipReader();
             $reader->process_all_zips();
-
             CHS_Logger::log("Sync process executed successfully.");
         } catch (\Throwable $e) {
             CHS_Logger::log("Sync process failed: " . $e->getMessage());
