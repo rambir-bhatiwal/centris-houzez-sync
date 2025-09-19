@@ -33,3 +33,10 @@ define('CHS_LOG_FILE', CHS_LOG_DIR . 'centris-sync.log');
 // Source path (default)
 define('CHS_SOURCE_PATH', get_option('chs_source_path', '/home/vitev704/centris'));
 define('CHS_FILE_PATTERN', get_option('chs_file_pattern', 'PIVOTELECOM*.TXT;PIVOTELECOM*.ZIP'));
+
+// Toronto timezone
+date_default_timezone_set('America/Toronto');
+define('CHS_TIMEZONE', 'America/Toronto');
+
+// Clear logs on each sync (can be disabled for debugging)
+define('CHS_CLEAR_LOGS_ON_SYNC', true); //TODO this is hardcoded due to development process otherwise it will be removed and above code will be enabled/uncommented 

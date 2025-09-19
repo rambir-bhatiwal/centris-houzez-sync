@@ -1,10 +1,47 @@
 /* Centris Houzez Sync - Admin Styles */
-
-
-Here is some suggestions:-
-
-https://codecanyon.net/item/wordpress-automatic-plugin/1904470?gad_source=1&gad_campaignid=12562115221&gbraid=0AAAAADgFCsBlRUNwul2kNVZYeMMxtaMVL&gclid=Cj0KCQjww4TGBhCKARIsAFLXndQ56DDo-41SK1WLc7Xwmu2573lvPRMFggwofgwvGpUpNe5gD7uRT2AaAngYEALw_wcB
-
-2) https://wordpress.org/plugins/feedzy-rss-feeds/
-
-3) https://wordpress.org/plugins/ai-feeds/ 
+.chs-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .chs-card h2 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+  }
+  .chs-settings-grid {
+    display: flex;
+    gap: 20px;
+  }
+  .chs-settings-box {
+    flex: 1;
+    background: #f9f9f9;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    padding: 15px;
+  }
+  .chs-action-buttons .button {
+    margin-right: 10px;
+  }
+  .button-danger {
+    background: #d63638;
+    border-color: #d63638;
+    color: #fff;
+  }
+  .button-danger:hover {
+    background: #b32d2e;
+    border-color: #a22829;
+  }
+  .chs-logs {
+    background: #1e1e1e;
+    color: #dcdcdc;
+    padding: 15px;
+    border-radius: 6px;
+    max-height: 400px;
+    overflow: auto;
+    font-family: monospace;
+    font-size: 13px;
+  }

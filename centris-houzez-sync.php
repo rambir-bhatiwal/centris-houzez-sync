@@ -9,6 +9,7 @@
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+
 // Define plugin constants
 define('CHS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 
@@ -21,7 +22,8 @@ require_once CHS_PLUGIN_DIR . 'inc/admin.php';
 require_once CHS_PLUGIN_DIR . 'inc/logger.php';
 require_once CHS_PLUGIN_DIR . 'inc/zip-parser.php';
 require_once CHS_PLUGIN_DIR . 'inc/cron/class-chs-cron.php';
-
+require_once CHS_PLUGIN_DIR . 'inc/utils/class-chs-utils.php';
+require_once CHS_PLUGIN_DIR . 'inc/setting.php';
 // Load services
 require_once CHS_PLUGIN_DIR . 'inc/services/class-chs-file-detector.php';
 new CHS_Cron();
@@ -55,26 +57,41 @@ add_action('admin_init', 'chs_register_settings');
 //     }
 // });
 
-
-
-
-
 // Load admin CSS
 function chs_admin_assets() {
     wp_enqueue_style('chs-admin-css', CHS_PLUGIN_URL . 'assets/admin.css');
 }
 add_action('admin_enqueue_scripts', 'chs_admin_assets');
 
-// Admin menu hook
-function chs_admin_menu() {
-    add_menu_page(
-        'Centris Sync',
-        'Centris Sync',
-        'manage_options',
-        'chs-admin',
-        'chs_admin_dashboard',
-        'dashicons-admin-home',
-        50
-    );
+
+
+/**
+ * ✅ Admin menu wrapper (class-based conversion only)
+ */
+class CHS_Admin_Menu {
+    private $CHS_AdminDashboard;
+
+    public function __construct() {
+        $this->CHS_AdminDashboard = new CHS_AdminDashboard();
+
+        add_action('admin_menu', [ $this, 'chs_admin_menu' ]);
+    }
+
+    public function chs_admin_menu() {
+        add_menu_page(
+            'Centris Sync',
+            'Centris Sync',
+            'manage_options',
+            'chs-admin',
+            [ $this->CHS_AdminDashboard, 'chs_admin_dashboard' ],
+            'dashicons-admin-home',
+            50
+        );
+    }
+    
 }
-add_action('admin_menu', 'chs_admin_menu');
+
+new CHS_Admin_Menu();
+if (is_admin()) {
+    new CHS_Admin_Settings();
+}

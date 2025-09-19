@@ -20,8 +20,17 @@ if (!defined('ABSPATH')) exit;
 
  function chs_sync_properties(): void {
     try {
+            /// Clear previous extracted files and logs
+            $extracted_dir = CHS_BASE_DIR . 'extracted/';
+            CHS_Utils::clearFolder(  $extracted_dir );
+            
+            /// Clear previous logs
+            if (file_exists(CHS_LOG_FILE) && CHS_CLEAR_LOGS_ON_SYNC) {
+                file_put_contents(CHS_LOG_FILE, '');
+            }
+
             $reader = new CHS_ZipReader();
-            $reader->process_all_zips();
+            $reader->process_all_files();
             CHS_Logger::log("Sync process executed successfully.");
         } catch (\Throwable $e) {
             CHS_Logger::log("Sync process failed: " . $e->getMessage());
