@@ -1,7 +1,8 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-class CHS_Admin_Settings {
+class CHS_Admin_Settings
+{
     protected $sourcePath;
     protected $filePattern;
     protected $cronMorning;
@@ -11,7 +12,8 @@ class CHS_Admin_Settings {
     protected $sendMode;
     protected $attachLog;
 
-    public function __construct() {
+    public function __construct()
+    {
         // Register submenu & settings
         add_action('admin_menu', [$this, 'registerMenu']);
         add_action('admin_init', [$this, 'registerSettings']);
@@ -30,7 +32,8 @@ class CHS_Admin_Settings {
     /**
      * Register submenu under main plugin menu
      */
-    public function registerMenu() {
+    public function registerMenu()
+    {
         add_submenu_page(
             'chs-admin',                    // parent slug
             'Settings',                // page title
@@ -39,6 +42,21 @@ class CHS_Admin_Settings {
             'chs-admin-settings',      // menu slug
             [$this, 'render']               // callback
         );
+        add_submenu_page(
+            'chs-admin',            // parent slug
+            'Column Inspector',
+            'Column Inspector',
+            'manage_options',
+            'chs-inspector',        // menu slug (✅ different from parent)
+            [$this, 'renderInspectorPage']
+        );
+    }
+
+    public function renderInspectorPage()
+    {
+        require_once CHS_PLUGIN_DIR . 'inc/services/chs-column-inspector.php';
+        $inspector = new CHS_ColumnInspector();
+        $inspector->renderInspectorPage();
     }
 
     /**
@@ -51,7 +69,8 @@ class CHS_Admin_Settings {
     //     register_setting('chs_settings_group_emails', 'chs_attach_log', 'sanitize_text_field');
     // }
 
-    public function registerSettings() {
+    public function registerSettings()
+    {
         register_setting('chs_settings_group_emails', 'chs_recipients', [
             'sanitize_callback' => 'sanitize_text_field'
         ]);
@@ -69,7 +88,8 @@ class CHS_Admin_Settings {
     /**
      * Render settings page
      */
-    public function render() {
+    public function render()
+    {
         if (!current_user_can('manage_options')) {
             wp_die('Unauthorized user');
         }
@@ -86,8 +106,9 @@ class CHS_Admin_Settings {
     /**
      * Page header
      */
-    protected function renderHeader() {
-        ?>
+    protected function renderHeader()
+    {
+?>
         <div class="wrap chs-admin-page">
             <h1><span class="dashicons dashicons-admin-generic"></span>Settings</h1>
             <style>
@@ -105,162 +126,193 @@ class CHS_Admin_Settings {
      *
      */
 
-       protected function renderSettings() {
+    protected function renderSettings()
+    {
         ?>
-          <!-- Settings Card -->
+            <!-- Settings Card -->
             <div class="chs-card">
                 <h2><span class="dashicons dashicons-admin-generic"></span> Settings</h2>
 
                 <form method="post" action="options.php">
-                <?= settings_fields('chs_settings_group'); ?>
-                <?= do_settings_sections('chs_settings_group'); ?>
+                    <?= settings_fields('chs_settings_group'); ?>
+                    <?= do_settings_sections('chs_settings_group'); ?>
 
-                <div class="chs-settings-grid">
-                    <!-- Left Side: Source Path & File Pattern -->
-                    <div class="chs-settings-box">
-                    <table class="form-table">
-                        <tr>
-                        <th><label for="chs_source_path">📂 Source Path</label></th>
-                        <td><input type="text" name="chs_source_path" id="chs_source_path" value="<?= esc_attr($this->sourcePath); ?>" class="regular-text" /></td>
-                        </tr>
-                        <tr>
-                        <th><label for="chs_file_pattern">📝 Filename Pattern</label></th>
-                        <td><input type="text" name="chs_file_pattern" id="chs_file_pattern" value="<?= esc_attr($this->filePattern); ?>" class="regular-text" /></td>
-                        </tr>
-                    </table>
+                    <div class="chs-settings-grid">
+                        <!-- Left Side: Source Path & File Pattern -->
+                        <div class="chs-settings-box">
+                            <table class="form-table">
+                                <tr>
+                                    <th><label for="chs_source_path">📂 Source Path</label></th>
+                                    <td><input type="text" name="chs_source_path" id="chs_source_path" value="<?= esc_attr($this->sourcePath); ?>" class="regular-text" /></td>
+                                </tr>
+                                <tr>
+                                    <th><label for="chs_file_pattern">📝 Filename Pattern</label></th>
+                                    <td><input type="text" name="chs_file_pattern" id="chs_file_pattern" value="<?= esc_attr($this->filePattern); ?>" class="regular-text" /></td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Right Side: Cron Settings -->
+                        <div class="chs-settings-box">
+                            <table class="form-table">
+                                <tr>
+                                    <th><label for="chs_cron_morning">🌅 Cron Morning</label></th>
+                                    <td><input type="time" name="chs_cron_morning" id="chs_cron_morning" value="<?= esc_attr($this->cronMorning); ?>" /></td>
+                                </tr>
+                                <tr>
+                                    <th><label for="chs_cron_evening">🌙 Cron Evening</label></th>
+                                    <td><input type="time" name="chs_cron_evening" id="chs_cron_evening" value="<?= esc_attr($this->cronEvening); ?>" /></td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
 
-                    <!-- Right Side: Cron Settings -->
-                    <div class="chs-settings-box">
-                    <table class="form-table">
-                        <tr>
-                        <th><label for="chs_cron_morning">🌅 Cron Morning</label></th>
-                        <td><input type="time" name="chs_cron_morning" id="chs_cron_morning" value="<?= esc_attr($this->cronMorning); ?>" /></td>
-                        </tr>
-                        <tr>
-                        <th><label for="chs_cron_evening">🌙 Cron Evening</label></th>
-                        <td><input type="time" name="chs_cron_evening" id="chs_cron_evening" value="<?= esc_attr($this->cronEvening); ?>" /></td>
-                        </tr>
-                    </table>
-                    </div>
-                </div>
-
-                <?= submit_button('💾 Save Settings'); ?>
+                    <?= submit_button('💾 Save Settings'); ?>
                 </form>
             </div>
-     <?php  
+        <?php
     }
 
     /**
      * Settings form
      */
-    protected function renderEmailSettings() {
+    protected function renderEmailSettings()
+    {
         ?>
-        <div class="chs-card">
-            <h2><span class="dashicons dashicons-admin-generic"></span> Email Configuration</h2>
+            <div class="chs-card">
+                <h2><span class="dashicons dashicons-admin-generic"></span> Email Configuration</h2>
 
-            <form method="post" action="options.php">
-                <?php 
-                    settings_fields('chs_settings_group_emails'); 
-                    do_settings_sections('chs_settings_group_emails'); 
-                ?>
+                <form method="post" action="options.php">
+                    <?php
+                    settings_fields('chs_settings_group_emails');
+                    do_settings_sections('chs_settings_group_emails');
+                    ?>
 
-                <div class="chs-settings-grid">
-                    <!-- Left: Recipients & Subject Prefix -->
-                    <div class="chs-settings-box">
-                        <table class="form-table">
-                            <tr>
-                                <th><label for="chs_recipients">📥 Recipients</label></th>
-                                <td>
-                                    <input type="text" name="chs_recipients" id="chs_recipients"
-                                           value="<?= esc_attr($this->recipients); ?>" 
-                                           class="regular-text" 
-                                           placeholder="Comma-separated emails" />
-                                </td>
-                            </tr>
-                            <tr>
-                                <th><label for="chs_subject_prefix">📝 Subject Prefix</label></th>
-                                <td>
-                                    <input type="text" name="chs_subject_prefix" id="chs_subject_prefix"
-                                           value="<?= esc_attr($this->subjectPrefix); ?>" 
-                                           class="regular-text" />
-                                </td>
-                            </tr>
-                        </table>
+                    <div class="chs-settings-grid">
+                        <!-- Left: Recipients & Subject Prefix -->
+                        <div class="chs-settings-box">
+                            <table class="form-table">
+                                <tr>
+                                    <th><label for="chs_recipients">📥 Recipients</label></th>
+                                    <td>
+                                        <input type="text" name="chs_recipients" id="chs_recipients"
+                                            value="<?= esc_attr($this->recipients); ?>"
+                                            class="regular-text"
+                                            placeholder="Comma-separated emails" />
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="chs_subject_prefix">📝 Subject Prefix</label></th>
+                                    <td>
+                                        <input type="text" name="chs_subject_prefix" id="chs_subject_prefix"
+                                            value="<?= esc_attr($this->subjectPrefix); ?>"
+                                            class="regular-text" />
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Right: Send Mode & Attach Last Log -->
+                        <div class="chs-settings-box">
+                            <table class="form-table">
+                                <tr>
+                                    <th><label for="chs_send_mode">⚡ Send Mode</label></th>
+                                    <td>
+                                        <select name="chs_send_mode" id="chs_send_mode">
+                                            <option value="disabled" <?= selected($this->sendMode, 'disabled'); ?>>disabled</option>
+                                            <option value="always" <?= selected($this->sendMode, 'always'); ?>>Always</option>
+                                            <option value="changes" <?= selected($this->sendMode, 'changes'); ?>>Only if changes</option>
+                                            <option value="error" <?= selected($this->sendMode, 'error'); ?>>Only on error</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th><label for="chs_attach_log">📎 Attach Last Log</label></th>
+                                    <td>
+                                        <select name="chs_attach_log" id="chs_attach_log">
+                                            <option value="no" <?= selected($this->attachLog, 'no'); ?>>No</option>
+                                            <option value="yes" <?= selected($this->attachLog, 'yes'); ?>>Yes</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
 
-                    <!-- Right: Send Mode & Attach Last Log -->
-                    <div class="chs-settings-box">
-                        <table class="form-table">
-                            <tr>
-                                <th><label for="chs_send_mode">⚡ Send Mode</label></th>
-                                <td>
-                                    <select name="chs_send_mode" id="chs_send_mode">
-                                        <option value="disabled" <?= selected($this->sendMode, 'disabled'); ?>>disabled</option>
-                                        <option value="always" <?= selected($this->sendMode, 'always'); ?>>Always</option>
-                                        <option value="changes" <?= selected($this->sendMode, 'changes'); ?>>Only if changes</option>
-                                        <option value="error" <?= selected($this->sendMode, 'error'); ?>>Only on error</option>
-                                    </select>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th><label for="chs_attach_log">📎 Attach Last Log</label></th>
-                                <td>
-                                    <select name="chs_attach_log" id="chs_attach_log">
-                                        <option value="no" <?= selected($this->attachLog, 'no'); ?>>No</option>
-                                        <option value="yes" <?= selected($this->attachLog, 'yes'); ?>>Yes</option>
-                                    </select>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
+                    <?= submit_button('💾 Save Settings'); ?>
+                </form>
 
-                <?= submit_button('💾 Save Settings'); ?>
-            </form>
+                <!-- Test Email Button -->
+                <form method="post" style="margin-top:15px;">
+                    <?php wp_nonce_field('chs_test_email_action', 'chs_test_email_nonce'); ?>
+                    <input type="hidden" name="chs_test_email" value="1" />
+                    <?php submit_button('✉ Send Test Email', 'secondary', 'chs_test_email_btn', false); ?>
+                </form>
 
-            <!-- Test Email Button -->
-            <form method="post" style="margin-top:15px;">
-                <?php wp_nonce_field('chs_test_email_action', 'chs_test_email_nonce'); ?>
-                <input type="hidden" name="chs_test_email" value="1" />
-                <?php submit_button('✉ Send Test Email', 'secondary', 'chs_test_email_btn', false); ?>
-            </form>
-
-        </div>
-        <?php
+            </div>
+    <?php
     }
 
     /**
      * Footer wrapper
      */
-    protected function footer() {
+    protected function footer()
+    {
         echo '</div>'; // .wrap
     }
 
-        
-    private function sendTestEmail() {
+
+    private function sendTestEmail()
+    {
         if (isset($_POST['chs_test_email']) && check_admin_referer('chs_test_email_action', 'chs_test_email_nonce')) {
             if (!current_user_can('manage_options')) {
                 wp_die('Unauthorized user');
             }
-                require_once CHS_PLUGIN_DIR . 'templates/emails/test-email.php';
-                if (class_exists('CHS_TestMail')) {
-                    $testMail = new CHS_TestMail(
-                        get_option('chs_mail_recipients', ''),
-                        get_option('chs_mail_subject_prefix', '[Centris Sync]')
-                    );
+            require_once CHS_PLUGIN_DIR . 'templates/emails/test-email.php';
+            if (class_exists('CHS_TestMail')) {
+                // $testMail = new CHS_TestMail(
+                //     get_option('chs_mail_recipients', ''),
+                //     get_option('chs_mail_subject_prefix', '[Centris Sync]')
+                // );
 
-                    $sent = $testMail->send();
+                // $sent = $testMail->send();
 
-                        if ($sent) {
-                            echo '<div class="updated notice"><p><strong>Test email sent successfully!</strong></p></div>';
-                        } else {
-                            echo '<div class="error notice"><p><strong>Failed to send test email. Check recipients or server settings.</strong></p></div>';
-                        }
-                    } else {
-                        echo '<div class="error notice"><p><strong>CHS_TestMail class not found!</strong></p></div>';
+
+                try {
+                    if (empty($this->recipients)) {
+                        echo "<script>alert('No recipients defined');</script>";
+                        CHS_Logger::logs("Email error: No recipients defined");
+                        return ['success' => false, 'error' => 'No recipients defined'];
                     }
 
+                    $subject = $this->subjectPrefix . ' Test Email';
+                    $body    = '<p>This is a test email to verify your Centris Sync settings.</p>';
+                    $headers = ['Content-Type: text/html; charset=UTF-8'];
+
+                    add_action('wp_mail_failed', function ($wp_error) {
+                        CHS_Logger::logs("Email error: " . $wp_error->get_error_message());
+                    });
+
+                    $sent = wp_mail($this->recipients, $subject, $body, $headers);
+
+                    if (!$sent) {
+                        CHS_Logger::log("Email error: wp_mail() returned false");
+                    } else {
+                        CHS_Logger::log("Test email sent successfully to " . $this->recipients);
+                    }
+                } catch (\Throwable $e) {
+                    CHS_Logger::logs("Email error: " . $e->getMessage());
+                }
+
+
+                if ($sent) {
+                    echo '<div class="updated notice"><p><strong>Test email sent successfully!</strong></p></div>';
+                } else {
+                    echo '<div class="error notice"><p><strong>Failed to send test email. Check recipients or server settings.</strong></p></div>';
+                }
+            } else {
+                echo '<div class="error notice"><p><strong>CHS_TestMail class not found!</strong></p></div>';
+            }
         }
     }
 }

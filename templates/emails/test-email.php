@@ -18,6 +18,7 @@ class CHS_TestMail {
      * @return bool True if sent successfully, false otherwise
      */
     public function send(): bool {
+        try{
         if (empty($this->recipients)) {
             return false;
         }
@@ -26,6 +27,12 @@ class CHS_TestMail {
         $body    = '<p>This is a test email to verify your Centris Sync settings.</p>';
         $headers = ['Content-Type: text/html; charset=UTF-8'];
 
-        return wp_mail($this->recipients, $subject, $body, $headers);
+//        return wp_mail($this->recipients, $subject, $body, $headers);
+        return mail($this->recipients, $subject, $body, $headers);
+
+    }catch (\Throwable $e) {
+            CHS_Logger::logs("Error: " . $e->getMessage());
+            return false;
+    }
     }
 }

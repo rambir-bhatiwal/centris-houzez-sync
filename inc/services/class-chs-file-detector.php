@@ -7,7 +7,7 @@ class CHS_FileDetector
     {
         $dir = rtrim($dir, '/');
         if (!is_dir($dir) || !is_readable($dir)) {
-            CHS_Logger::log('Invalid directory: ' . $dir);
+            CHS_Logger::logs('Invalid directory: ' . $dir);
             return [];
         }
 
@@ -111,59 +111,61 @@ class CHS_FileDetector
         return round($sizeInMb, 2) . ' MB';
     }
 
-    public static function parsePatternsByExtWithPrefixSuffixCaseSensitive($patternString) {
-        $patterns = array_map('trim', explode(';', $patternString));
-        $results = [];
+    public static function parsePatternsByExtWithPrefixSuffixCaseSensitive($patternString)
+    {
+        try {
+            $patterns = array_map('trim', explode(';', $patternString));
+            $results = [];
 
-        foreach ($patterns as $pattern) {
-            // Extract extension (keep original case)
-            $extPos = strrpos($pattern, '.');
-            if ($extPos !== false) {
-                $extension = substr($pattern, $extPos + 1); 
-                $patternCore = substr($pattern, 0, $extPos);
-            } else {
-                $extension = '';
-                $patternCore = $pattern;
+            foreach ($patterns as $pattern) {
+                // Extract extension (keep original case)
+                $extPos = strrpos($pattern, '.');
+                if ($extPos !== false) {
+                    $extension = substr($pattern, $extPos + 1);
+                    $patternCore = substr($pattern, 0, $extPos);
+                } else {
+                    $extension = '';
+                    $patternCore = $pattern;
+                }
+
+                // Convert extension to UPPERCASE for array key
+                $extensionKey = strtoupper($extension);
+
+                // Determine prefix or suffix
+                $prefix = '';
+                $suffix = '';
+                if (str_starts_with($patternCore, '*') && str_ends_with($patternCore, '*')) {
+                    $inner = trim($patternCore, '*');
+                    $prefix = $inner;
+                    $suffix = $inner;
+                } elseif (str_starts_with($patternCore, '*')) {
+                    $suffix = ltrim($patternCore, '*');
+                } elseif (str_ends_with($patternCore, '*')) {
+                    $prefix = rtrim($patternCore, '*');
+                } else {
+                    $prefix = $patternCore;
+                }
+
+                // Initialize extension arrays if not exists
+                if (!isset($results[$extensionKey])) {
+                    $results[$extensionKey] = [
+                        'prefix' => [],
+                        'suffix' => []
+                    ];
+                }
+
+                // Store values (avoid duplicates)
+                if ($prefix !== '' && !in_array($prefix, $results[$extensionKey]['prefix'], true)) {
+                    $results[$extensionKey]['prefix'][] = $prefix;
+                }
+                if ($suffix !== '' && !in_array($suffix, $results[$extensionKey]['suffix'], true)) {
+                    $results[$extensionKey]['suffix'][] = $suffix;
+                }
             }
 
-            // Convert extension to UPPERCASE for array key
-            $extensionKey = strtoupper($extension);
-
-            // Determine prefix or suffix
-            $prefix = '';
-            $suffix = '';
-            if (str_starts_with($patternCore, '*') && str_ends_with($patternCore, '*')) {
-                $inner = trim($patternCore, '*');
-                $prefix = $inner;
-                $suffix = $inner;
-            } elseif (str_starts_with($patternCore, '*')) {
-                $suffix = ltrim($patternCore, '*');
-            } elseif (str_ends_with($patternCore, '*')) {
-                $prefix = rtrim($patternCore, '*');
-            } else {
-                $prefix = $patternCore;
-            }
-
-            // Initialize extension arrays if not exists
-            if (!isset($results[$extensionKey])) {
-                $results[$extensionKey] = [
-                    'prefix' => [],
-                    'suffix' => []
-                ];
-            }
-
-            // Store values (avoid duplicates)
-            if ($prefix !== '' && !in_array($prefix, $results[$extensionKey]['prefix'], true)) {
-                $results[$extensionKey]['prefix'][] = $prefix;
-            }
-            if ($suffix !== '' && !in_array($suffix, $results[$extensionKey]['suffix'], true)) {
-                $results[$extensionKey]['suffix'][] = $suffix;
-            }
+            return $results;
+        } catch (\Throwable $e) {
+            CHS_Logger::logs("Error detactor " . $e->getMessage());
         }
-
-        return $results;
     }
-
-
-
 }

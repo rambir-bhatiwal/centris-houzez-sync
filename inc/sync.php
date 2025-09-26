@@ -31,8 +31,9 @@ if (!defined('ABSPATH')) exit;
 
             $reader = new CHS_ZipReader();
             $reader->process_all_files();
+            CHS_Utils::sendEmail();
             CHS_Logger::log("Sync process executed successfully.");
         } catch (\Throwable $e) {
-            CHS_Logger::log("Sync process failed: " . $e->getMessage());
+            CHS_Logger::logs("Sync process failed: " . $e->getMessage());
         }
 }
