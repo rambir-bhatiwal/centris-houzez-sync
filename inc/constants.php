@@ -12,6 +12,8 @@ $localDomains = ['localhost', '127.0.0.1', '::1', 'dev.yoursite.com']; // Add yo
 // }
 define('CHS_DEV_MODE', true); //TODO this is hardcoded due to development process otherwise it will be removed and above code will be enabled/uncommented 
 
+// define plugin version
+define('CHS_PLUGIN_VERSION', '1.0.0');
 
 // define('CHS_PLUGIN_DIR', plugin_dir_path(__FILE__) . '../');
 define('CHS_PLUGIN_URL', plugin_dir_url(__FILE__) . '../');

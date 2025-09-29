@@ -27,11 +27,17 @@ class CHS_ErrorMail
                 return false;
             }
 
-                      $subject = $this->subjectPrefix . ' Logs Summary';
+            $subject = $this->subjectPrefix . '  Error Logs ';
             $body    = $this->getLogFileContents();
             $headers = ['Content-Type: text/html; charset=UTF-8'];
+            $chs_attach_log = get_option('chs_attach_log') ?? 'NO'; // default to 'always'
+            if (( $chs_attach_log === 'yes' ||$chs_attach_log === 'YES') && file_exists($this->logFile)) {
+                $attachments = [$this->logFile];
+            } else {
+                $attachments = [];
+            }
 
-            return wp_mail($this->recipients, $subject, $body, $headers);
+            return wp_mail($this->recipients, $subject, $body, $headers, $attachments);
         } catch (\Throwable $e) {
             CHS_Logger::logs("Error: " . $e->getMessage());
             return false;

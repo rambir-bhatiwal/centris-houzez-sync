@@ -12,11 +12,10 @@ class CHS_Photo_Sync
     protected int $postId;
     protected array $remotePhotos;
     protected array $signatures;
+    protected $status;
     protected array $media;
-
     public function __construct($filename, $data)
     {
-
         $this->media =    CHS_Centris_Mapping::getMappedDataSingle($data, $filename); // ensure mappings loaded
         $this->postId = CHS_Utils::getPostIdByCentryMLS($this->media['_centris_mls'] ?? '');
         $this->postId;
@@ -26,7 +25,13 @@ class CHS_Photo_Sync
             CHS_Logger::logs("No post ID or remote photos found for MLS: " . ($this->media['_centris_mls'] ?? ''));
             // return;
         }
-        $this->run();
+        $this->status = $this->run();
+    }
+    public function result(){
+        if(empty($this->status) || !is_string($this->status)){
+            return false;
+        }
+        return $this->status;
     }
 
     public function run()
@@ -51,7 +56,7 @@ class CHS_Photo_Sync
         $head = self::head($url, $headers);
         if (!empty($head['error'])) {
             CHS_Logger::logs("HEAD failed for $url: " . $head['error']);
-            return false;
+            return 'total_photos_failed';
         }
 
         $code = $head['code'];
@@ -68,7 +73,7 @@ class CHS_Photo_Sync
             $newSignatures[$url]['alt'] = $alt;
             CHS_Logger::log("HEAD 304 Not Modified for $url, reusing attachment ID {$existing['attachment_id']}");
             unset($missing[$url]);
-            return true;
+            return 'skipped_unchanged';
         }
 
         // 3. If metadata same → reuse
@@ -79,7 +84,7 @@ class CHS_Photo_Sync
             ]);
             unset($missing[$url]);
             CHS_Logger::log("HEAD metadata unchanged for $url, reusing attachment ID {$existing['attachment_id']}");
-            return false;
+            return 'skipped_unchanged';
         }
 
         // 4. Need to download
@@ -87,7 +92,7 @@ class CHS_Photo_Sync
 
         if (!empty($dl['error'])) {
             CHS_Logger::logs("Download failed for $url: " . $dl['error']);
-            return false;
+            return 'failed_download';
         }
 
         $filePath = $dl['file'];
@@ -125,7 +130,7 @@ class CHS_Photo_Sync
         // ✅ Set featured + gallery
         $this->updateGallery($newSignatures);
 
-        return true;
+        return 'downloaded_new';
     }
 
     public static function sideloadToMedia(string $tmpFile, string $filename, int $postId): int
@@ -210,6 +215,7 @@ class CHS_Photo_Sync
         $response = wp_remote_head($url, $args);
 
         if (is_wp_error($response)) {
+            CHS_Logger::logs('Media HEAD failed due to: ' . $response->get_error_message());
             return ['error' => $response->get_error_message()];
         }
 

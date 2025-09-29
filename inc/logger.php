@@ -17,20 +17,6 @@ class CHS_Logger
         $this->log_file = CHS_LOG_FILE;
         $this->log_dir  = CHS_LOG_DIR; /// dirname($this->log_file);
         $this->error_log_file = CHS_ERROR_LOG_FILE;
-        // if (!file_exists($this->log_file)) {
-        //     wp_mkdir_p(target: $this->log_dir);
-        //         touch($this->error_log_file);
-
-        //     @chmod($this->log_file, 0644);
-        // }
-        // if (!file_exists($this->error_log_file)) {
-        //     wp_mkdir_p($this->error_log_file);
-        //     touch($this->error_log_file);
-
-        //     @chmod($this->error_log_file, 0644);
-
-        // }
-
         // Ensure log directory exists
         if (!file_exists($this->log_dir)) {
             wp_mkdir_p($this->log_dir);
@@ -43,8 +29,15 @@ class CHS_Logger
             @chmod($this->log_file, 0644);
         }
 
-        // Ensure error log file exists
         if (!file_exists($this->error_log_file)) {
+            $dir = dirname($this->error_log_file);
+
+            // make sure the folder exists first
+            if (!is_dir($dir)) {
+                wp_mkdir_p($dir); // WordPress-safe mkdir -p
+            }
+
+            // now create the file
             touch($this->error_log_file);
             @chmod($this->error_log_file, 0644);
         }
@@ -99,6 +92,7 @@ class CHS_Logger
         $error_log_file = $logger->error_log_file;
         $formatted = date('Y-m-d H:i:s') . " - " . $message . "\n";
         file_put_contents($error_log_file, $formatted, FILE_APPEND);
+        self::clear_error_logs();
     }
 
     /**
@@ -108,8 +102,20 @@ class CHS_Logger
     public static function clear_error_logs()
     {
         $logger = self::instance();
-        $file = glob($logger->error_log_file);
-        unlink($file);
+        // $file = glob($logger->error_log_file);
+        // unlink($file);
+            $filePath = $logger->error_log_file;
+
+        // Make sure it's a real file
+        if (file_exists($filePath)) {
+            $fileSize = filesize($filePath); // size in bytes
+            $maxSize = 10 * 1024 * 1024;     // 10 MB
+
+            if ($fileSize > $maxSize) {
+                unlink($filePath);
+                CHS_Logger::logs("Error log cleared because it exceeded 10MB.");
+            }
+        }
     }
 
     /**

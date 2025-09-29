@@ -99,6 +99,184 @@ class CHS_AdminDashboard
           ?>
         </form>
       </div>
+      </div>  
+      <!-- Summary Report -->
+<div class="chs-card">
+        <h2><span class="dashicons dashicons-analytics"></span> Summary Report</h2>
+        
+<?php
+$lastSummaryFile = get_option('chs_last_json_file', '');
+
+if (!empty($lastSummaryFile) && file_exists($lastSummaryFile)) {
+
+    $summary = json_decode(file_get_contents($lastSummaryFile), true);
+
+    if (!empty($summary)) {
+
+        $lastErrors = CHS_Utils::getLastErrors(
+            CHS_ERROR_LOG_FILE,
+            $summary['started_at'],
+            $summary['ended_at'],
+            10
+        );
+        ?>
+
+        <div class="chs-card">
+            <h2><span class="dashicons dashicons-analytics"></span> Centris Sync Summary</h2>
+
+            <p>
+                <strong>Run status:</strong> OK<br>
+                <strong>Duration:</strong> <?= esc_html($summary['duration']) ?><br>
+                <strong>Started at:</strong> <?= esc_html($summary['started_at']) ?><br>
+                <strong>Ended at:</strong> <?= esc_html($summary['ended_at']) ?>
+            </p>
+
+            <hr>
+
+            <h3>System Info</h3>
+            <ul>
+                <li><strong>Site URL:</strong> <?= esc_html($summary['system']['site_url']) ?></li>
+                <li><strong>Environment:</strong> <?= esc_html($summary['system']['environment']) ?></li>
+                <li><strong>Plugin Version:</strong> <?= esc_html($summary['system']['plugin_version']) ?></li>
+            </ul>
+
+            <hr>
+
+            <h3>Listings</h3>
+            <table class="widefat striped fixed">
+                <thead>
+                    <tr>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th>Unpublished</th>
+                        <th>Unchanged</th>
+                        <th>Reactivated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><?= esc_html($summary['changes_tracked']['created']) ?></td>
+                        <td><?= esc_html($summary['changes_tracked']['updated']) ?></td>
+                        <td><?= esc_html($summary['changes_tracked']['unpublished']) ?></td>
+                        <td><?= esc_html($summary['changes_tracked']['unchanged']) ?></td>
+                        <td><?= esc_html($summary['changes_tracked']['reactivated']) ?></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <hr>
+
+            <h3>Photos</h3>
+            <?php foreach ($summary['photos_counter_file_bases'] as $file => $counts): ?>
+                <p><strong>File:</strong> <?= esc_html($file) ?></p>
+                <table class="widefat striped fixed">
+                    <thead>
+                        <tr>
+                            <th>Total Processed</th>
+                            <th>Skipped</th>
+                            <th>Downloaded New</th>
+                            <th>Downloaded Updated</th>
+                            <th>Removed</th>
+                            <th>Failed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><?= esc_html($counts['total_photos_processed']) ?></td>
+                            <td><?= esc_html($counts['skipped_unchanged']) ?></td>
+                            <td><?= esc_html($counts['downloaded_new']) ?></td>
+                            <td><?= esc_html($counts['downloaded_updated']) ?></td>
+                            <td><?= esc_html($counts['removed']) ?></td>
+                            <td><?= esc_html($counts['total_photos_failed']) ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+            <?php endforeach; ?>
+
+            <hr>
+
+            <h3>Files Processed</h3>
+            <table class="widefat striped fixed">
+                <thead>
+                    <tr>
+                        <th>Path</th>
+                        <th>Size (MB)</th>
+                        <th>Modified (America/Toronto)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($summary['detected_files'] as $file): ?>
+                        <tr>
+                            <td><?= esc_html($file['path']) ?></td>
+                            <td><?= esc_html($file['size_mb']) ?></td>
+                            <td><?= esc_html($file['mtime']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <hr>
+
+            <h3>Errors (Top 10)</h3>
+            <?php if (!empty($lastErrors)): ?>
+                <table class="widefat striped fixed">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Error Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($lastErrors as $error):
+                            $parts = explode(' - ', $error, 2);
+                            $timestamp = $parts[0] ?? '';
+                            $message = $parts[1] ?? $error;
+                        ?>
+                            <tr>
+                                <td><?= esc_html($timestamp) ?></td>
+                                <td><?= esc_html($message) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p>No errors reported in this run.</p>
+            <?php endif; ?>
+
+            <hr>
+
+            <h3>Links</h3>
+            <ul>
+                <li>
+                    <a href="<?= esc_url(site_url('/uploads/centris-sync/summaries/' . basename($lastSummaryFile))) ?>" download="summary.json">
+                        Download Summary File
+                    </a>
+                </li>
+            </ul>
+
+        </div>
+
+    <?php
+    }
+}
+?>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     </div>
   <?php
   }
@@ -127,8 +305,6 @@ class CHS_AdminDashboard
       <!-- Files -->
       <div class="chs-card">
         <h2><span class="dashicons dashicons-media-code"></span> Detected source files (last 5)</h2>
-        <p><em>Timezone: America/Toronto</em></p>
-
         <?php
         if (isset($_POST['chs_scan_now']) && check_admin_referer('chs_scan_now_action', 'chs_scan_now_nonce')) {
           if (!current_user_can('manage_options')) {
@@ -136,8 +312,16 @@ class CHS_AdminDashboard
           }
           update_option('chs_last_scan', time()); // just to trigger refresh
           echo '<div class="updated notice"><p><strong>Scan executed. Table refreshed.</strong></p></div>';
-
+          $files = CHS_FileDetector::detect($this->sourcePath,  $this->filePattern, 5);
+          $torontoTime = new DateTime('now', new DateTimeZone(CHS_TIMEZONE));
+          $files['date'] = $torontoTime->format('Y-m-d H:i:s');
+        }else {
+          $files = null;
+        }
+         $files = CHS_Utils::chs_store_or_get_json( $files);
+         if($files){
         ?>
+          <p><em>Timezone: America/Toronto,</em> Last scan on: <?=$files['date'] ;?> </p>
           <table class="widefat striped fixed">
             <thead>
               <tr>
@@ -153,16 +337,22 @@ class CHS_AdminDashboard
               // Detected source files
 
               // $files = chs_detect_source_files($sourcePath, $filePattern, 5);/
-              $files = CHS_FileDetector::detect($this->sourcePath, $this->filePattern, 5);
+              // $files = CHS_Utils::chs_store_or_get_json( $files);
 
               if (!empty($files)) {
+                unset($files['date']);
                 //       echo '<table class="widefat"><thead><tr><th>Path</th><th>Size</th><th>MTime</th></tr></thead><tbody>';
                 foreach ($files as $f) {
-                  echo '<tr>';
-                  echo '<td>' . esc_html($f['path']) . '</td>';
-                  echo '<td>' . esc_html($f['size_mb']) . '</td>';
-                  echo '<td>' . esc_html($f['mtime']) . '</td>';
-                  echo '</tr>';
+                     if (is_array($f)) {
+                        echo '<tr>';
+                        echo '<td>' . esc_html($f['path']) . '</td>';
+                        echo '<td>' . esc_html($f['size_mb']) . '</td>';
+                        echo '<td>' . esc_html($f['mtime']) . '</td>';
+                        echo '</tr>';
+                    } else {
+                        // fallback for string
+                        echo '<tr><td colspan="3">' . esc_html($f) . '</td></tr>';
+                    }
                 }
                 //     echo '</tbody></table>';
               } else {

@@ -97,6 +97,10 @@ class CHS_Admin_Settings
             $this->sendTestEmail();
         }
 
+        if (isset($_POST['chs_email']) && check_admin_referer('chs_email_action', 'chs_email_nonce')) {
+            $this->sendEmail();
+        }
+
         $this->renderHeader();
         $this->renderSettings();
         $this->renderEmailSettings();
@@ -248,6 +252,11 @@ class CHS_Admin_Settings
                     <input type="hidden" name="chs_test_email" value="1" />
                     <?php submit_button('✉ Send Test Email', 'secondary', 'chs_test_email_btn', false); ?>
                 </form>
+                <form method="post" style="margin-top:15px;">
+                    <?php wp_nonce_field('chs_email_action', 'chs_email_nonce'); ?>
+                    <input type="hidden" name="chs_email" value="1" />
+                    <?php submit_button('✉ Send Email', 'secondary', 'chs_email_btn', false); ?>
+                </form>
 
             </div>
     <?php
@@ -314,5 +323,46 @@ class CHS_Admin_Settings
                 echo '<div class="error notice"><p><strong>CHS_TestMail class not found!</strong></p></div>';
             }
         }
+    }
+    private function sendEmail()
+    {
+        if (isset($_POST['chs_email']) && check_admin_referer('chs_email_action', 'chs_email_nonce')) {
+            if (!current_user_can('manage_options')) {
+                wp_die('Unauthorized user');
+            }
+            
+                try {
+                    if (empty($this->recipients)) {
+                        echo "<script>alert('No recipients defined to send mail');</script>";
+                        CHS_Logger::logs("Email error: No recipients defined");
+                        return ['success' => false, 'error' => 'No recipients defined'];
+                    }
+
+                    add_action('wp_mail_failed', function ($wp_error) {
+                        CHS_Logger::logs("Email error: " . $wp_error->get_error_message());
+                    });
+
+                    $sent = CHS_Utils::sendEmail();
+                    // $sent = wp_mail($this->recipients, $subject, $body, $headers);
+
+                    if (!$sent) {
+                        CHS_Logger::log("Email error: wp_mail() returned false");
+                    } else {
+                        CHS_Logger::log("Email sent successfully to " . $this->recipients);
+                    }
+                } catch (\Throwable $e) {
+                    CHS_Logger::logs("Email error: " . $e->getMessage());
+                }
+
+
+                if ($sent) {
+                    echo '<div class="updated notice"><p><strong>Email sent successfully!</strong></p></div>';
+                } else {
+                    echo '<div class="error notice"><p><strong>Failed to send email. Check recipients or server settings.</strong></p></div>';
+                }
+            } else {
+                echo '<div class="error notice"><p><strong>CHS_Mail class not found!</strong></p></div>';
+            }
+        
     }
 }

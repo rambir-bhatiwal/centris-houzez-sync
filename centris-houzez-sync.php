@@ -1,14 +1,11 @@
 <?php
-
+if (! defined('ABSPATH')) exit; // Exit if accessed directly
 /**
  * Plugin Name: Custom Centris Houzez Sync 
  * Description: Sync Centris SIIQ property listings into Houzez theme.
  * Version: 1.0.0
  * Author: Panch Ram
  */
-
-// Exit if accessed directly
-if (! defined('ABSPATH')) exit;
 
 // Define plugin constants
 define('CHS_PLUGIN_DIR', plugin_dir_path(__FILE__));

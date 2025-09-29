@@ -41,11 +41,15 @@ class CHS_ZipReader
 
     /* Parsed result storage */
     protected $parsed = [];
+    protected $sourcePath;
+    protected $filePattern;
 
     public function __construct()
     {
         $this->tz = new DateTimeZone($this->tzName);
-
+        $this->sourcePath   = get_option('chs_source_path', '/home/vitev704/centris');
+        $this->filePattern  = get_option('chs_file_pattern', 'PIVOTELECOM*.TXT;PIVOTELECOM*.ZIP');
+        CHS_Utils::createJsonFile();
         $upload_dir = wp_upload_dir();
         $this->base_dir    = rtrim($upload_dir['basedir'], '/\\') . '/centris-sync/';
         $this->zip_dir     = CHS_SOURCE_PATH . '/';    // existing pattern: source path
@@ -147,7 +151,13 @@ class CHS_ZipReader
 
         try {
             // === ZIP Handling ===
+            $start_time = $this->now();
+            CHS_Utils::writeJsonFile('started_at', $start_time);
+            CHS_Utils::writeJsonFileSystemInfo();
             $zips = glob($this->zip_dir . '*.{zip,ZIP}', GLOB_BRACE);
+            $totalzips = count($zips) ?? 0;
+            CHS_Utils::writeJsonFile('processed_total_zip', $totalzips);
+
             if (!empty($zips)) {
                 CHS_Logger::log("Found " . count($zips) . " ZIP(s) to process.");
                 foreach ($zips as $zipFile) {
@@ -158,6 +168,16 @@ class CHS_ZipReader
 
             // === Standalone TXT/CSV Handling ===
             $textFiles = glob($this->zip_dir . '*.{txt,TXT,csv,CSV}', GLOB_BRACE);
+            $total_texts = count($textFiles) ?? 0;
+            CHS_Utils::writeJsonFile('processed_total_text', $total_texts);
+            $total_zips_and_txt_files = ($total_texts + $totalzips) ?? 0;
+            CHS_Utils::writeJsonFile('processed_total', $total_zips_and_txt_files);
+
+            $total_files_with_sizes_and_type = CHS_FileDetector::detect($this->sourcePath, $this->filePattern,$total_zips_and_txt_files );
+            CHS_Utils::writeJsonFile('detected_files', $total_files_with_sizes_and_type );
+
+
+
             if (!empty($textFiles)) {
                 CHS_Logger::log("Found " . count($textFiles) . " standalone TXT/CSV file(s) to process.");
                 foreach ($textFiles as $txtFile) {
@@ -175,6 +195,8 @@ class CHS_ZipReader
                     if ($res !== null) $results[] = $res;
                 }
             }
+            $processEndTime = $this->now();
+            CHS_Utils::writeJsonFile('ended_at', $processEndTime);
 
             CHS_Logger::log("All file processing finished.");
         } catch (\Throwable $e) {
@@ -182,8 +204,24 @@ class CHS_ZipReader
         } finally {
             $this->releaseLock();
         }
+        $this->get_time_diff(strtotime($start_time), strtotime($processEndTime));
 
         return $results;
+    }
+
+    /**
+     * Get time difference in seconds
+     * */ 
+    private function get_time_diff($processStartTime, $processEndTime){
+
+        $diffSeconds = $processEndTime - $processStartTime;
+        $hours   = floor($diffSeconds / 3600);
+        $minutes = floor(($diffSeconds % 3600) / 60);
+        $seconds = $diffSeconds % 60;
+
+        // Format with leading zeros
+        $formattedDiff = sprintf("hours: %02d, min: %02d, sec: %02d", $hours, $minutes, $seconds);
+        CHS_Utils::writeJsonFile('duration',$formattedDiff);
     }
     /* ---------------- Single ZIP flow ---------------- */
 
@@ -333,7 +371,7 @@ class CHS_ZipReader
                 // delimiter detection & parse
                 $first = $this->get_first_non_empty_line($file);
                 $delim = $first !== null ? $this->detect_delimiter($first) : ',';
-                $rows = $this->parse_generic_csv($file, $delim);
+                $rows = $this->parse_generic_csv($file, $delim, $sourceFile);
 
                 $duration = microtime(true) - $start;
                 $duration_s = round($duration, 2);
@@ -364,7 +402,7 @@ class CHS_ZipReader
      * Parse CSV/TXT generically and return associative rows (header => value)
      * Keeps existing robust behavior and ensures UTF-8 normalization.
      */
-    protected function parse_generic_csv($file, $delimiter = ',')
+    protected function parse_generic_csv($file, $delimiter = ',', $sourceFile = null)
     {
         $rows = [];
         try {
@@ -446,16 +484,40 @@ class CHS_ZipReader
             }
 
             $CHS_PropertyCreator = new CHS_PropertyCreator();
-            $CHS_PropertyCreator->createOrUpdateProperty($file_data_array);
+            $CHS_PropertyCreator->createOrUpdateProperty($file_data_array, $sourceFile);
             // manage photos here 
 
             //  new CHS_Photo_Sync('PHOTOS.TXT', $media_data_array);
             // $index = 0;
+
+            $sourceFile ??= 'unknown_source_file';
+            $json_photos_counter = [
+                'total_photos_processed' => 0,
+                'skipped_unchanged' => 0,
+                'downloaded_new' => 0,
+                'downloaded_updated' => 0,
+                'removed' => 0,
+                'total_photos_failed' => 0
+            ];
+
+            $chs_photo_sync_data= [];
             foreach ($media_data_array as $media_data) {
                 if (!isset($media_data)) continue;
                 // $index++;
                 // if($index >16) continue;
-                $CHS_Photo_Sync = new CHS_Photo_Sync('PHOTOS.TXT', $media_data);
+                $chs_photo_sync = new CHS_Photo_Sync('PHOTOS.TXT', $media_data);
+                $chs_photo_sync_data = $chs_photo_sync->result();
+                if(empty($chs_photo_sync_data)) continue;
+                if(isset($chs_photo_sync_data) && array_key_exists($chs_photo_sync_data,$json_photos_counter)){    
+                    $json_photos_counter[$chs_photo_sync_data] ++;
+                    continue;
+                }else if(isset($chs_photo_sync_data) && !array_key_exists($chs_photo_sync_data,$json_photos_counter)){   
+                    $json_photos_counter[$chs_photo_sync_data] = 1;
+                }
+            }
+            if(basename($file) === 'PHOTOS.TXT' || basename($file) === 'PHOTOS.txt' || basename($file) === 'photos.txt' ){
+                $json_photos_counter_file_bases[basename($sourceFile)] = $json_photos_counter;
+                CHS_Utils::writeJsonFile('photos_counter_file_bases', $json_photos_counter_file_bases);
             }
 
             fclose($handle);
